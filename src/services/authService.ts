@@ -131,10 +131,12 @@ export const authService = {
     writeUsers(users.map((u) => (u.id === id ? { ...u, password: data.newPassword } : u)));
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async forgotPassword(_email: string): Promise<void> {
     await delay();
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async resetPassword(_data: ResetPasswordPayload): Promise<void> {
     await delay();
   },

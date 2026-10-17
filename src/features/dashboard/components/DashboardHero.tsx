@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronsLeft } from 'lucide-react';
 import { toArabicDigits } from '../../../utils';
+import historyBg from '../../../assets/images/HistorywithoutData.png';
 
 interface DashboardHeroProps {
   firstName: string;
@@ -13,11 +14,10 @@ export const DashboardHero: React.FC<DashboardHeroProps> = ({
   totalPoints,
   onStartChallenge,
 }) => (
-  <div className="w-full bg-brand-dark rounded-3xl relative overflow-hidden p-6 sm:p-8 md:p-10 shadow-xl mb-10 md:mb-12">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(23,94,59,0.8),#0B3B24_60%,#052114)] pointer-events-none" />
-    <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-    <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-brand-primary/20 blur-3xl pointer-events-none" />
-
+  <div
+    className="w-full bg-brand-dark rounded-3xl relative overflow-hidden p-6 sm:p-8 md:p-10 shadow-xl mb-10 md:mb-12 bg-cover bg-center"
+    style={{ backgroundImage: `url(${historyBg})` }}
+  >
     <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
       <div className="text-center sm:text-right">
         <span className="text-emerald-100/90 text-[14px] font-medium block mb-1">

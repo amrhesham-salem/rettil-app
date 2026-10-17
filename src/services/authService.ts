@@ -117,14 +117,14 @@ export const authService = {
   },
 
   // ── 8. إعادة تعيين كلمة المرور (POST /auth/reset-password/) ──
-  async resetPassword(data: ResetPasswordPayload): Promise<void> {
+  async resetPassword(data: ResetPasswordPayload & { confirmPassword?: string }): Promise<void> {
     await api.post('/auth/reset-password/', {
       uid: data.uid,
       token: data.token,
-      password: data.newPassword,
+      new_password: data.newPassword,
+      confirm_password: data.confirmPassword || data.newPassword,
     });
   },
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   addPoints(_userId: string, _points: number): User | null {
     return null;

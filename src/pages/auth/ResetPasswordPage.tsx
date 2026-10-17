@@ -28,10 +28,15 @@ export const ResetPasswordPage: React.FC = () => {
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    try {
-      setServerError(null);
-      await authService.resetPassword({ uid, token, newPassword: data.newPassword });
-      navigate(ROUTES.login);
+try {
+    setServerError(null);
+    await authService.resetPassword({
+      uid,
+      token,
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
+    });
+    navigate(ROUTES.login);
     } catch (err) {
       setServerError(getErrorMessage(err));
     }
@@ -45,14 +50,14 @@ export const ResetPasswordPage: React.FC = () => {
         <p className="text-[#6B7280] text-[13px]">اختر كلمة مرور جديدة لحسابك</p>
       </div>
 
-      {!uid || !token ? (
-        <div className="flex flex-col gap-4 text-right">
-          <p className="text-[14px] font-bold text-red-600">رابط إعادة التعيين غير صالح أو منتهي</p>
-          <Link to={ROUTES.forgotPassword} className="font-bold text-brand-dark hover:underline">
-            اطلب رابطاً جديداً
-          </Link>
-        </div>
-      ) : (
+{!token ? (
+  <div className="flex flex-col gap-4 text-right">
+    <p className="text-[14px] font-bold text-red-600">رابط إعادة التعيين غير صالح أو منتهي</p>
+    <Link to={ROUTES.forgotPassword} className="font-bold text-brand-dark hover:underline">
+      اطلب رابطاً جديداً
+    </Link>
+  </div>
+) : (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
           <Input
             label="كلمة المرور الجديدة"

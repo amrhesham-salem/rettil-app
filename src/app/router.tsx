@@ -33,6 +33,7 @@ export const AppRouter = () => (
       <Route path={ROUTES.home} element={<LandingPage />} />
       <Route path={ROUTES.challengePreview} element={<ChallengeSessionPage />} />
       <Route path={ROUTES.resetPassword} element={<ResetPasswordPage />} />
+      <Route path="/reset-forget-password" element={<ResetPasswordPage />} />
 
       <Route element={<GuestRoute />}>
         <Route path={ROUTES.login} element={<LoginPage />} />

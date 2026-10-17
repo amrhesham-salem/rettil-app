@@ -1,3 +1,4 @@
+import { api, tokenStorage } from '../lib';
 import { STORAGE_KEYS } from '../constants';
 import type {
   User,
@@ -10,154 +11,132 @@ import type {
   CreateHistoryRecordInput,
 } from '../types';
 
-interface StoredUser extends User {
-  password: string;
-}
+// مفتاح كاش بيانات المستخدم في المتصفح للحفاظ على بقاء الجلسة مفتوحة عند الـ Refresh
+const USER_CACHE_KEY = STORAGE_KEYS.apiUser;
 
-const USERS_KEY = STORAGE_KEYS.users;
-const SESSION_KEY = STORAGE_KEYS.session;
-const HISTORY_KEY = STORAGE_KEYS.history;
+// دالة مساعدة لتخزين بيانات المستخدم محلياً بعد جلبها من السيرفر
+const cacheUser = (user: User): void => {
+  localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+};
 
-const delay = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const readUsers = (): StoredUser[] => {
+// دالة مساعدة لقراءة بيانات المستخدم المخبأة عند فتح الموقع
+const getCachedUser = (): User | null => {
   try {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(USER_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return [];
+    return null;
   }
 };
 
-const writeUsers = (users: StoredUser[]): void => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
-
-const toPublicUser = (stored: StoredUser): User => ({
-  id: stored.id,
-  name: stored.name,
-  email: stored.email,
-  points: stored.points,
-});
-
-const getCurrentSessionId = (): string | null =>
-  localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
-
-const saveSession = (id: string, remember: boolean): void => {
-  localStorage.removeItem(SESSION_KEY);
-  sessionStorage.removeItem(SESSION_KEY);
-  (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, id);
-};
-
 export const authService = {
+  // ── 1. إنشاء حساب جديد (POST /auth/register/) ──
   async signup(data: SignupPayload): Promise<User> {
-    await delay();
-    const users = readUsers();
-    const email = data.email.trim().toLowerCase();
-
-    if (users.some((u) => u.email === email)) {
-      throw new Error('هذا البريد الإلكتروني مسجّل بالفعل');
-    }
-
-    const newUser: StoredUser = {
-      id: crypto.randomUUID(),
-      name: data.name.trim(),
-      email,
+    await api.post('/auth/register/', {
+      full_name: data.name,
+      email: data.email,
       password: data.password,
-      points: 0,
+      confirm_password: data.confirmPassword || data.password,
+    });
+
+    // بعد إنشاء الحساب في السيرفر بنجاح، نقوم بتسجيل الدخول تلقائياً
+    return authService.login({
+      email: data.email,
+      password: data.password,
+      rememberMe: true,
+    });
+  },
+
+  // ── 2. تسجيل الدخول (POST /auth/login/ + GET /user/profile/get/) ──
+  async login(data: Required<LoginPayload>): Promise<User> {
+    // إرسال الإيميل والباسورد لجلب الـ Tokens
+    const res = await api.post<{ access: string; refresh: string }>('/auth/login/', {
+      email: data.email,
+      password: data.password,
+    });
+
+    // تخزين الـ Tokens في المتصفح (localStorage أو sessionStorage حسب تذكرني)
+    tokenStorage.setTokens(res.data.access, res.data.refresh, data.rememberMe);
+
+    // جلب بيانات الحساب (الاسم والنقاط والإيميل)
+    const profileRes = await api.get('/user/profile/get/');
+    const user: User = {
+      id: String(profileRes.data.id),
+      name: profileRes.data.name || profileRes.data.username || '',
+      email: profileRes.data.email,
+      points: profileRes.data.points ?? profileRes.data.total_points ?? 0,
     };
 
-    writeUsers([...users, newUser]);
-    saveSession(newUser.id, true);
-    return toPublicUser(newUser);
+    cacheUser(user);
+    return user;
   },
 
-  async login(data: Required<LoginPayload>): Promise<User> {
-    await delay();
-    const email = data.email.trim().toLowerCase();
-    const found = readUsers().find((u) => u.email === email && u.password === data.password);
-
-    if (!found) {
-      throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
-    }
-
-    saveSession(found.id, data.rememberMe);
-    return toPublicUser(found);
-  },
-
+  // ── 3. تسجيل الخروج ──
   logout(): void {
-    localStorage.removeItem(SESSION_KEY);
-    sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(HISTORY_KEY);
+    tokenStorage.clear();
+    localStorage.removeItem(USER_CACHE_KEY);
   },
 
+  // ── 4. استرجاع الجلسة عند عمل Refresh للموقع ──
   getSession(): User | null {
-    const id = getCurrentSessionId();
-    if (!id) return null;
-    const found = readUsers().find((u) => u.id === id);
-    return found ? toPublicUser(found) : null;
+    if (!tokenStorage.getAccess()) return null;
+    return getCachedUser();
   },
-
+  
+// ── 5. تعديل الملف الشخصي (PUT /user/profile/update/) ──
   async updateProfile(data: UpdateProfilePayload): Promise<User> {
-    await delay();
-    const id = getCurrentSessionId();
-    const users = readUsers();
-    const email = data.email.trim().toLowerCase();
+    const res = await api.put('/user/profile/update/', {
+      full_name: data.name,
+      email: data.email,
+    });
 
-    if (users.some((u) => u.email === email && u.id !== id)) {
-      throw new Error('هذا البريد الإلكتروني مستخدم بالفعل');
-    }
+    const current = getCachedUser();
+    const updated: User = {
+      id: String(res.data?.id || current?.id || ''),
+      name: data.name || res.data?.full_name || res.data?.name || current?.name || '',
+      email: data.email || res.data?.email || current?.email || '',
+      points: res.data?.points ?? current?.points ?? 0,
+    };
 
-    const updated = users.map((u) =>
-      u.id === id ? { ...u, name: data.name.trim(), email } : u
-    );
-    writeUsers(updated);
-
-    const found = updated.find((u) => u.id === id);
-    if (!found) throw new Error('المستخدم غير موجود');
-    return toPublicUser(found);
+    cacheUser(updated);
+    return updated;
   },
 
+  // ── 6. تغيير كلمة المرور (PUT /user/change-password/) ──
   async changePassword(data: ChangePasswordPayload): Promise<void> {
-    await delay();
-    const id = getCurrentSessionId();
-    const users = readUsers();
-    const found = users.find((u) => u.id === id);
+    await api.put('/user/change-password/', {
+      old_password: data.currentPassword,
+      new_password: data.newPassword,
+      confirm_password: data.confirmPassword || data.newPassword,
+    });
+  },
 
-    if (!found || found.password !== data.currentPassword) {
-      throw new Error('كلمة المرور الحالية غير صحيحة');
-    }
+  // ── 7. نسيت كلمة المرور (POST /auth/forget-password/) ──
+  async forgotPassword(email: string): Promise<void> {
+    await api.post('/auth/forget-password/', { email });
+  },
 
-    writeUsers(users.map((u) => (u.id === id ? { ...u, password: data.newPassword } : u)));
+  // ── 8. إعادة تعيين كلمة المرور (POST /auth/reset-password/) ──
+  async resetPassword(data: ResetPasswordPayload): Promise<void> {
+    await api.post('/auth/reset-password/', {
+      uid: data.uid,
+      token: data.token,
+      password: data.newPassword,
+    });
   },
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async forgotPassword(_email: string): Promise<void> {
-    await delay();
-  },
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async resetPassword(_data: ResetPasswordPayload): Promise<void> {
-    await delay();
-  },
-
-  addPoints(userId: string, points: number): User | null {
-    if (points <= 0) return null;
-    const updated = readUsers().map((u) =>
-      u.id === userId ? { ...u, points: u.points + points } : u
-    );
-    writeUsers(updated);
-    const found = updated.find((u) => u.id === userId);
-    return found ? toPublicUser(found) : null;
+  addPoints(_userId: string, _points: number): User | null {
+    return null;
   },
 
   getAllUsers(): User[] {
-    return readUsers().map(toPublicUser);
+    return [];
   },
 
   getHistory(): HistoryRecord[] {
     try {
-      const saved = localStorage.getItem(HISTORY_KEY);
+      const saved = localStorage.getItem(STORAGE_KEYS.history);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -165,7 +144,7 @@ export const authService = {
   },
 
   saveHistory(records: HistoryRecord[]): void {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(records));
+    localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(records));
   },
 
   createHistoryRecord(input: CreateHistoryRecordInput): HistoryRecord {

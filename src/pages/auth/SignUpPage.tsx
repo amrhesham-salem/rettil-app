@@ -44,6 +44,7 @@ export const SignUpPage: React.FC = () => {
         name: data.name,
         email: data.email,
         password: data.password,
+        confirmPassword: data.confirmPassword, 
       });
       navigate(ROUTES.challenge);
     } catch (err: unknown) {

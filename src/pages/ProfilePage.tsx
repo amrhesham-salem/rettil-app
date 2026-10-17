@@ -74,6 +74,7 @@ export const ProfilePage: React.FC = () => {
       await changePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
       });
       passwordForm.reset();
       setActiveView('main');

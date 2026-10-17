@@ -18,6 +18,7 @@ export interface LoginPayload {
 }
 
 export interface SignupPayload {
+  confirmPassword: string;
   name: string;
   email: string;
   password: string;
@@ -31,10 +32,12 @@ export interface UpdateProfilePayload {
 export interface ChangePasswordPayload {
   currentPassword: string;
   newPassword: string;
+  confirmPassword?: string;
 }
 
 export interface ResetPasswordPayload {
   uid: string;
   token: string;
   newPassword: string;
+  confirmPassword?: string;
 }

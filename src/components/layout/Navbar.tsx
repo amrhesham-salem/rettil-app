@@ -56,8 +56,9 @@ export const Navbar: React.FC = () => {
 
   if (!user) return null;
 
-  const firstName = user.name.trim().split(' ')[0] || user.email;
-  const initial = firstName.charAt(0);
+  const rawName = user.name || user.email || 'مستخدم';
+  const firstName = rawName.trim().split(' ')[0] || 'مستخدم';
+  const initial = firstName.charAt(0) || 'أ';
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-[#EDE6D3] bg-brand-light" dir="rtl">

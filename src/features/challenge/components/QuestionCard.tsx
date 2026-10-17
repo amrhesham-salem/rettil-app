@@ -87,7 +87,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         aria-live="polite"
         className={`mb-4 flex h-10 items-center justify-center gap-2 rounded-xl border px-5 text-[13px] font-bold ${
           result.isCorrect
-            ? 'border-green-500 bg-green-100 text-[#2D7A3F]'
+            ? 'border-green-500 bg-green-100 text-correct-border'
             : 'border-red-400 bg-red-50 text-red-600'
         }`}
       >

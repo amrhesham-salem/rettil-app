@@ -15,7 +15,12 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   const firstName = user?.name ? user.name.split(' ')[0] : '';
-  const totalPoints = user?.points ?? 0;
+
+  // جلب أحدث نقاط للمستخدم من قائمة المتصدرين (الأحدث 6 نقاط)
+  const currentUserEntry = entries.find(
+    (e) => e.isCurrentUser || e.name === user?.name || (user?.name && e.name.includes(user.name))
+  );
+  const totalPoints = currentUserEntry?.points ?? user?.points ?? 0;
 
   return (
     <div className="min-h-screen bg-brand-light text-right font-sans" dir="rtl">

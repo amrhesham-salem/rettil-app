@@ -10,10 +10,38 @@ import {
   type AuthUser,
 } from './auth-context';
 import { authService } from '../services';
+import { api } from '../lib/axios';
+import { API_ENDPOINTS } from '../config/endpoints';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [history, setHistory] = useState<HistoryRecord[]>(() => authService.getHistory());
   const [baseUser, setBaseUser] = useState(() => authService.getSession());
+
+  // مزامنة أحدث نقاط وبيانات من الباك إند فور فتح الموقع
+  useEffect(() => {
+    let active = true;
+    api
+      .get(API_ENDPOINTS.user.getProfile)
+      .then(({ data }) => {
+        if (active && data) {
+          setBaseUser((prev) => {
+            if (!prev) return prev;
+            const updated = {
+              ...prev,
+              name: data.full_name || data.name || data.username || prev.name,
+              points: Number(data.total_points ?? data.points ?? prev.points),
+            };
+            localStorage.setItem('rattil_api_user', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     authService.saveHistory(history);

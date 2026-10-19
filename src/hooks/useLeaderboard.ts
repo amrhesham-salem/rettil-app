@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { QUERY_KEYS } from '../constants';
+import { QUERY_KEYS, STORAGE_KEYS } from '../constants';
 import { API_ENDPOINTS } from '../config/endpoints';
 import { leaderboardService } from '../services';
 import { useAuth } from './useAuth';
@@ -17,9 +17,6 @@ interface WsLeaderboardItem {
   score?: number;
 }
 
-/**
- * جلب قائمة المتصدرين (أفضل 10 مستخدمين) لحظياً عبر WebSocket.
- */
 export const useLeaderboard = () => {
   const { user } = useAuth();
   const queryKey = QUERY_KEYS.leaderboard(user?.id, user?.points);
@@ -58,14 +55,32 @@ export const useLeaderboard = () => {
             const updatedList: LeaderboardEntry[] = list.slice(0, 10).map((item, index) => {
               const itemId = String(item.id ?? item.user_id ?? index + 1);
               const itemName = item.full_name || item.name || item.username || 'مستخدم';
+              const isMe =
+                itemId === String(user?.id) ||
+                Boolean(user?.name && itemName.includes(user.name));
+
+              const itemPoints = Number(item.total_points ?? item.points ?? item.score ?? 0);
+
+              // تحديث الكاش المحلي بالنقاط الحقيقية من السيرفر لمنع ظهور أي رقم قديم
+              if (isMe) {
+                try {
+                  const rawUser = localStorage.getItem(STORAGE_KEYS.apiUser);
+                  if (rawUser) {
+                    const parsed = JSON.parse(rawUser);
+                    parsed.points = itemPoints;
+                    localStorage.setItem(STORAGE_KEYS.apiUser, JSON.stringify(parsed));
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+
               return {
                 id: itemId,
                 name: itemName,
-                points: Number(item.total_points ?? item.points ?? item.score ?? 0),
+                points: itemPoints,
                 rank: index + 1,
-                isCurrentUser:
-                  itemId === String(user?.id) ||
-                  Boolean(user?.name && itemName === user.name),
+                isCurrentUser: isMe,
               };
             });
 
@@ -92,7 +107,13 @@ export const useLeaderboard = () => {
     }
 
     return () => {
-      socket?.close();
+      if (socket) {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        } else if (socket.readyState === WebSocket.CONNECTING) {
+          socket.onopen = () => socket?.close();
+        }
+      }
     };
   }, [user?.id, user?.name]);
 

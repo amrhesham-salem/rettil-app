@@ -158,7 +158,7 @@ export const challengeService = {
         : rawCorrect;
     }
 
-    const pointsEarned = Number(data.points_earned ?? data.pointsEarned ?? (isCorrect ? 10 : 0));
+    const pointsEarned = Number(data.points_earned ?? data.pointsEarned ?? (isCorrect ? 1 : 0));
 
     return {
       isCorrect,

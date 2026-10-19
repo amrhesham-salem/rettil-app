@@ -5,6 +5,7 @@ import { Navbar } from '../components/layout/Navbar';
 import { ROUTES } from '../constants/routes';
 import { JUZ_NUMBERS } from '../constants/quran';
 import { quranService, type SurahItem } from '../services/quranService';
+import historyBg from '../assets/images/HistorywithoutData.png';
 
 const SELECT_CLASS =
   'h-11 w-full rounded-lg border border-brand-sand bg-white px-4 text-right text-[14px] font-bold text-brand-dark outline-none transition focus:border-brand-secondary focus:ring-2 focus:ring-brand-secondary/15 disabled:bg-gray-100 disabled:opacity-60';
@@ -72,11 +73,11 @@ export const ChallengePage: React.FC = () => {
           </p>
         </section>
 
-        {/* ── Random challenge card (بالخلفية والنقشة الأصلية كاملة) ── */}
-        <section className="relative mb-6 sm:mb-10 w-full overflow-hidden rounded-3xl sm:rounded-[28px] border-2 border-brand-secondary/80 bg-brand-dark px-5 sm:px-7 py-7 sm:py-8 text-center shadow-sm md:px-12">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(24,111,68,0.75),transparent_34%),radial-gradient(circle_at_80%_15%,rgba(9,64,38,0.85),transparent_32%),linear-gradient(135deg,#064323,#00572F_48%,#003D22)]" />
-          <div className="absolute inset-0 opacity-[0.16] bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_0)] bg-size-[30px_30px]" />
-
+        {/* ── Random challenge card (بصورة HistorywithoutData.png الأصلية) ── */}
+        <section
+          className="relative mb-6 sm:mb-10 w-full overflow-hidden rounded-3xl sm:rounded-[28px] border-2 border-brand-secondary/80 bg-brand-dark bg-cover bg-center bg-no-repeat px-5 sm:px-7 py-7 sm:py-8 text-center shadow-sm md:px-12"
+          style={{ backgroundImage: `url(${historyBg})` }}
+        >
           <div className="relative z-10">
             <div className="mb-3 flex items-center justify-center gap-2 text-white">
               <Dice5 size={17} />
@@ -84,7 +85,7 @@ export const ChallengePage: React.FC = () => {
             </div>
             <p className="mx-auto mb-7 sm:mb-8 max-w-lg text-[13px] font-medium leading-7 text-emerald-50/85">
               اختبار فوري يختبر قوة استحضارك لآيات عشوائية من كامل السور التي تم تثبيتها في سجل
-              حفظك، مثالي لتنشيط الذاكرة قبل الورد اليومي.
+              حفظك، مثالي لتنشيط الورد اليومي.
             </p>
             <button
               type="button"

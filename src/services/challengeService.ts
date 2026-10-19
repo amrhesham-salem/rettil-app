@@ -7,7 +7,6 @@ import type {
   SubmitAnswerResult,
 } from '../types';
 
-// حفظ خريطة الخيارات لكل جلسة لإرسال رقم الإجابة كما يطلبه الباك إند
 const sessionOptionMap = new Map<string, Map<string, number>>();
 
 interface RawOption {
@@ -21,7 +20,10 @@ interface RawOption {
 
 export const challengeService = {
   // POST /game/generate/
-  async generateQuestion(params: QuestionsParams): Promise<ChallengeQuestion | null> {
+  async generateQuestion(
+    params: QuestionsParams,
+    _excludeId?: string
+  ): Promise<ChallengeQuestion | null> {
     const payload: Record<string, unknown> = {
       challenge_type: params.mode === 'specific' ? 'specific' : 'random',
     };
@@ -29,6 +31,10 @@ export const challengeService = {
     if (params.mode === 'specific') {
       if (params.surah) payload.surah = Number(params.surah);
       if (params.juz) payload.juz = Number(params.juz);
+    }
+
+    if (_excludeId) {
+      payload.exclude_id = _excludeId;
     }
 
     const { data } = await api.post<Record<string, unknown>>(

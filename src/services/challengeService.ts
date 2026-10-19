@@ -8,18 +8,21 @@ import type {
 } from '../types';
 
 const sessionOptionMap = new Map<string, Map<string, number>>();
+const sessionIdToTextMap = new Map<string, Map<number, string>>();
 
 function extractSurahName(data: Record<string, unknown>): string {
   const rawSurah = data.surah_name ?? data.surah;
   if (typeof rawSurah === 'string' && rawSurah.trim()) {
-    return rawSurah.startsWith('سورة') ? rawSurah : `سورة ${rawSurah}`;
+    return rawSurah.startsWith('سورة') || rawSurah.startsWith('سُورَةُ')
+      ? rawSurah
+      : `سورة ${rawSurah}`;
   }
   if (typeof rawSurah === 'object' && rawSurah !== null) {
     const obj = rawSurah as Record<string, unknown>;
     const name =
       obj.name ?? obj.surah_name ?? Object.values(obj).find((v) => typeof v === 'string');
     if (typeof name === 'string' && name.trim()) {
-      return name.startsWith('سورة') ? name : `سورة ${name}`;
+      return name.startsWith('سورة') || name.startsWith('سُورَةُ') ? name : `سورة ${name}`;
     }
   }
   return 'تحدي عشوائي';
@@ -28,13 +31,14 @@ function extractSurahName(data: Record<string, unknown>): string {
 function extractOptions(data: Record<string, unknown>): {
   options: string[];
   optionMap: Map<string, number>;
+  idToTextMap: Map<number, string>;
 } {
   const optionMap = new Map<string, number>();
+  const idToTextMap = new Map<number, string>();
   const options: string[] = [];
 
-  // 1. البحث عن أي مصفوفة اختيارات في الـ Response مهما كان اسم المفتاح
   let rawArray: unknown[] | undefined = undefined;
-  const knownKeys = ['options', 'choices', 'answers', 'ayahs', 'question_options', 'choices_list'];
+  const knownKeys = ['questions', 'options', 'choices', 'answers', 'ayahs'];
   for (const key of knownKeys) {
     if (Array.isArray(data[key])) {
       rawArray = data[key] as unknown[];
@@ -50,6 +54,7 @@ function extractOptions(data: Record<string, unknown>): {
     rawArray.forEach((opt, idx) => {
       if (typeof opt === 'string') {
         optionMap.set(opt, idx + 1);
+        idToTextMap.set(idx + 1, opt);
         options.push(opt);
       } else if (typeof opt === 'object' && opt !== null) {
         const obj = opt as Record<string, unknown>;
@@ -75,32 +80,17 @@ function extractOptions(data: Record<string, unknown>): {
         );
         if (text) {
           optionMap.set(text, id);
+          idToTextMap.set(id, text);
           options.push(text);
         }
       }
     });
-    return { options, optionMap };
   }
 
-  // 2. إذا كانت الاختيارات مرسلة كحقول منفصلة (option_1, option_2 أو choice_1...)
-  const numberedKeys = Object.keys(data).filter((k) =>
-    /^(option|choice|answer|ayah)_?[1-4]$/i.test(k)
-  );
-  if (numberedKeys.length > 0) {
-    numberedKeys.sort().forEach((k, idx) => {
-      const val = data[k];
-      if (typeof val === 'string' && val.trim()) {
-        optionMap.set(val, idx + 1);
-        options.push(val);
-      }
-    });
-  }
-
-  return { options, optionMap };
+  return { options, optionMap, idToTextMap };
 }
 
 export const challengeService = {
-  // POST /game/generate/
   async generateQuestion(
     params: QuestionsParams,
     _excludeId?: string
@@ -123,13 +113,12 @@ export const challengeService = {
       payload
     );
 
-    console.log('Generate Question API Response:', data);
-
     if (!data) return null;
 
     const sessionId = String(data.session_id ?? data.id ?? Date.now());
-    const { options, optionMap } = extractOptions(data);
+    const { options, optionMap, idToTextMap } = extractOptions(data);
     sessionOptionMap.set(sessionId, optionMap);
+    sessionIdToTextMap.set(sessionId, idToTextMap);
 
     return {
       id: sessionId,
@@ -143,9 +132,9 @@ export const challengeService = {
     };
   },
 
-  // POST /game/submit/
   async submitAnswer(payload: SubmitAnswerPayload): Promise<SubmitAnswerResult> {
     const optionMap = sessionOptionMap.get(payload.questionId);
+    const idToTextMap = sessionIdToTextMap.get(payload.questionId);
     const userAnswerId = optionMap?.get(payload.answer) ?? 1;
 
     const { data } = await api.post<Record<string, unknown>>(
@@ -156,12 +145,19 @@ export const challengeService = {
       }
     );
 
-    console.log('Submit Answer API Response:', data);
-
     const isCorrect = Boolean(data.is_correct ?? data.isCorrect ?? data.correct ?? false);
-    const correctAnswer = String(
-      data.correct_answer ?? data.correctAnswer ?? (isCorrect ? payload.answer : '')
-    );
+    const rawCorrect = data.correct_answer ?? data.correctAnswer;
+
+    let correctAnswer = payload.answer;
+    if (typeof rawCorrect === 'number') {
+      correctAnswer = idToTextMap?.get(rawCorrect) ?? payload.answer;
+    } else if (typeof rawCorrect === 'string' && rawCorrect.trim()) {
+      const asNum = Number(rawCorrect);
+      correctAnswer = !Number.isNaN(asNum)
+        ? (idToTextMap?.get(asNum) ?? rawCorrect)
+        : rawCorrect;
+    }
+
     const pointsEarned = Number(data.points_earned ?? data.pointsEarned ?? (isCorrect ? 10 : 0));
 
     return {

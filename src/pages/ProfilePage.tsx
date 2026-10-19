@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +13,8 @@ import {
 } from '../features/profile/components';
 import { useAuth } from '../hooks';
 import { getErrorMessage } from '../lib';
+import { api } from '../lib/axios';
+import { API_ENDPOINTS } from '../config/endpoints';
 import {
   profileSchema,
   changePasswordSchema,
@@ -32,6 +34,27 @@ export const ProfilePage: React.FC = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // حالة النقاط المحدثة لحظياً فور فتح الصفحة
+  const [points, setPoints] = useState<number>(currentUser?.points ?? 0);
+
+  // جلب أحدث نقاط من السيرفر تلقائياً بمجرد الدخول للصفحة بدون الحاجة لريفرش
+  useEffect(() => {
+    let active = true;
+    api
+      .get(API_ENDPOINTS.user.getProfile)
+      .then(({ data }) => {
+        if (active && data) {
+          const freshPoints = Number(data.total_points ?? data.points ?? currentUser?.points ?? 0);
+          setPoints(freshPoints);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.points]);
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -110,7 +133,7 @@ export const ProfilePage: React.FC = () => {
             <ProfileSummaryCard
               name={currentUser?.name ?? ''}
               email={currentUser?.email ?? ''}
-              points={currentUser?.points ?? 0}
+              points={points}
             />
             <ProfileActionsCard
               onEditProfile={() => openView('edit-profile')}

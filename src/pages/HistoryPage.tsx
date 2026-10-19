@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { api } from '../lib/axios';
 import { API_ENDPOINTS } from '../config/endpoints';
+import { UNANSWERED_SESSION_KEY } from '../services/challengeService';
 import historyBg from '../assets/images/HistorywithoutData.png';
 import { ROUTES } from '../constants/routes';
 import { formatDateTime } from '../utils/arabic';
@@ -53,7 +54,45 @@ export const HistoryPage: React.FC = () => {
           };
         });
 
-        setHistoryData(mapped);
+        // 1. إذا كان هناك سؤال مفتوح لم يضغط المستخدم "تأكيد" عليه بعد، نستبعده من أعلى السجل
+        const unansweredRaw = sessionStorage.getItem(UNANSWERED_SESSION_KEY);
+        let startIndex = 0;
+        if (unansweredRaw && mapped.length > 0 && mapped[0].status === 'wrong') {
+          try {
+            const unanswered = JSON.parse(unansweredRaw) as { surah?: string; timestamp?: number };
+            if (unanswered.timestamp && Date.now() - unanswered.timestamp < 1000 * 60 * 15) {
+              startIndex = 1;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // 2. تصفية السجلات المزدوجة القديمة (التي نتجت عن إرسال generate مرتين في نفس الدقيقة)
+        const cleaned: HistoryRecord[] = [];
+        const sliced = mapped.slice(startIndex);
+
+        for (let i = 0; i < sliced.length; i++) {
+          const current = sliced[i];
+          const next = sliced[i + 1];
+
+          // إذا كان السطر الحالي "خطأ" والسطر الذي يليه مباشرة لنفس السورة ونفس الدقيقة هو "صح"، نتخطى السطر الوهمي
+          if (
+            next &&
+            current.status === 'wrong' &&
+            next.status === 'correct' &&
+            current.surah === next.surah &&
+            current.type === next.type &&
+            Math.abs(new Date(current.timestamp).getTime() - new Date(next.timestamp).getTime()) <
+              65000
+          ) {
+            continue;
+          }
+
+          cleaned.push(current);
+        }
+
+        setHistoryData(cleaned);
       } catch {
         setHistoryData([]);
       } finally {

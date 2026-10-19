@@ -10,6 +10,13 @@ import type {
 const sessionOptionMap = new Map<string, Map<string, number>>();
 const sessionIdToTextMap = new Map<string, Map<number, string>>();
 
+// منع إرسال طلبين متطابقين في نفس اللحظة بسبب StrictMode
+let inflightKey = '';
+let inflightPromise: Promise<ChallengeQuestion | null> | null = null;
+
+// حفظ بيانات السؤال المفتوح حالياً والذي لم يضغط المستخدم "تأكيد" عليه بعد
+export const UNANSWERED_SESSION_KEY = 'rattil_unanswered_session';
+
 function extractSurahName(data: Record<string, unknown>): string {
   const rawSurah = data.surah_name ?? data.surah;
   if (typeof rawSurah === 'string' && rawSurah.trim()) {
@@ -95,41 +102,64 @@ export const challengeService = {
     params: QuestionsParams,
     _excludeId?: string
   ): Promise<ChallengeQuestion | null> {
-    const payload: Record<string, unknown> = {
-      challenge_type: params.mode === 'specific' ? 'specific' : 'random',
-    };
-
-    if (params.mode === 'specific') {
-      if (params.surah) payload.surah = Number(params.surah);
-      if (params.juz) payload.juz = Number(params.juz);
+    const requestKey = `${params.mode}-${params.surah ?? ''}-${params.juz ?? ''}-${_excludeId ?? ''}`;
+    if (inflightPromise && inflightKey === requestKey) {
+      return inflightPromise;
     }
 
-    if (_excludeId) {
-      payload.exclude_id = _excludeId;
-    }
+    inflightKey = requestKey;
+    inflightPromise = (async () => {
+      try {
+        const payload: Record<string, unknown> = {
+          challenge_type: params.mode === 'specific' ? 'specific' : 'random',
+        };
 
-    const { data } = await api.post<Record<string, unknown>>(
-      API_ENDPOINTS.game.generateQuestion,
-      payload
-    );
+        if (params.mode === 'specific') {
+          if (params.surah) payload.surah = Number(params.surah);
+          if (params.juz) payload.juz = Number(params.juz);
+        }
 
-    if (!data) return null;
+        if (_excludeId) {
+          payload.exclude_id = _excludeId;
+        }
 
-    const sessionId = String(data.session_id ?? data.id ?? Date.now());
-    const { options, optionMap, idToTextMap } = extractOptions(data);
-    sessionOptionMap.set(sessionId, optionMap);
-    sessionIdToTextMap.set(sessionId, idToTextMap);
+        const { data } = await api.post<Record<string, unknown>>(
+          API_ENDPOINTS.game.generateQuestion,
+          payload
+        );
 
-    return {
-      id: sessionId,
-      surah: extractSurahName(data),
-      juz: String(data.juz ?? params.juz ?? ''),
-      previousAyah: String(
-        data.previous_ayah ?? data.previousAyah ?? data.question ?? data.first_ayah ?? ''
-      ),
-      nextAyah: String(data.next_ayah ?? data.nextAyah ?? data.second_ayah ?? ''),
-      options,
-    };
+        if (!data) return null;
+
+        const sessionId = String(data.session_id ?? data.id ?? Date.now());
+        const surah = extractSurahName(data);
+        const { options, optionMap, idToTextMap } = extractOptions(data);
+        sessionOptionMap.set(sessionId, optionMap);
+        sessionIdToTextMap.set(sessionId, idToTextMap);
+
+        // تعليم هذه الجلسة بأنها لم تُحل بعد حتى يضغط المستخدم "تأكيد"
+        sessionStorage.setItem(
+          UNANSWERED_SESSION_KEY,
+          JSON.stringify({ surah, timestamp: Date.now() })
+        );
+
+        return {
+          id: sessionId,
+          surah,
+          juz: String(data.juz ?? params.juz ?? ''),
+          previousAyah: String(
+            data.previous_ayah ?? data.previousAyah ?? data.question ?? data.first_ayah ?? ''
+          ),
+          nextAyah: String(data.next_ayah ?? data.nextAyah ?? data.second_ayah ?? ''),
+          options,
+        };
+      } finally {
+        setTimeout(() => {
+          inflightPromise = null;
+        }, 500);
+      }
+    })();
+
+    return inflightPromise;
   },
 
   async submitAnswer(payload: SubmitAnswerPayload): Promise<SubmitAnswerResult> {
@@ -144,6 +174,9 @@ export const challengeService = {
         user_answer: userAnswerId,
       }
     );
+
+    // المستخدم ضغط "تأكيد" بالفعل، فنزيل علامة السؤال غير المحلول
+    sessionStorage.removeItem(UNANSWERED_SESSION_KEY);
 
     const isCorrect = Boolean(data.is_correct ?? data.isCorrect ?? data.correct ?? false);
     const rawCorrect = data.correct_answer ?? data.correctAnswer;

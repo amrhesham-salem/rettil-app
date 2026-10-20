@@ -65,12 +65,12 @@ export const ChallengeSessionPage: React.FC = () => {
     <div className="min-h-screen bg-brand-light text-right flex flex-col font-sans" dir="rtl">
       <Navbar />
 
-      <main className="w-full flex-1 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+      <main className="w-full flex-1 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
         <div
-          className="w-full max-w-295 h-[calc(100vh-90px)] max-h-190 min-h-145 relative flex items-center justify-center bg-no-repeat bg-center rounded-3xl"
+          className="w-full max-w-295 min-h-[calc(100dvh-90px)] lg:h-[calc(100vh-90px)] lg:max-h-190 relative flex items-center justify-center bg-no-repeat bg-center rounded-3xl py-6 sm:py-8 px-2"
           style={{ backgroundImage: `url(${challengeBackground})`, backgroundSize: '100% 100%' }}
         >
-          <div className="relative z-10 w-[90%] sm:w-[75%] md:w-[60%] max-w-140 rounded-[22px] border border-brand-sand bg-white/98 backdrop-blur-md shadow-2xl px-5 sm:px-8 py-6 sm:py-7 my-auto text-center">
+          <div className="relative z-10 w-[94%] sm:w-[80%] md:w-[65%] max-w-140 max-h-[82dvh] lg:max-h-[85%] overflow-y-auto rounded-[22px] border border-brand-sand bg-white/98 backdrop-blur-md shadow-2xl px-4 sm:px-8 py-5 sm:py-7 my-auto text-center">
             {isLoading && <QuestionSkeleton />}
 
             {isError && (

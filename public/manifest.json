@@ -1,0 +1,21 @@
+{
+  "name": "رَتِّل — مراجعة حفظ القرآن الكريم",
+  "short_name": "رَتِّل",
+  "description": "رَتِّل — راجع حفظك بهدوء وثقة. اختبر نفسك في الآية المفقودة وتابع نتائجك.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF9F4",
+  "theme_color": "#0B3B24",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

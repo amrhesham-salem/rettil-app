@@ -26,7 +26,7 @@ export const DashboardPage: React.FC = () => {
     <div className="min-h-screen bg-brand-light text-right font-sans" dir="rtl">
       <Navbar />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-20">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 pt-12 pb-20">
         <DashboardHero
           firstName={firstName}
           totalPoints={totalPoints}

@@ -56,7 +56,7 @@ export const authService = {
     });
 
     // تخزين الـ Tokens في المتصفح (localStorage أو sessionStorage حسب تذكرني)
-    tokenStorage.setTokens(res.data.access, res.data.refresh, data.rememberMe);
+    tokenStorage.setTokens(res.data.access, res.data.refresh);
 
     // جلب بيانات الحساب (الاسم والنقاط والإيميل)
     const profileRes = await api.get('/user/profile/get/');

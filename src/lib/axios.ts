@@ -1,35 +1,27 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { env } from '../config';
-import { STORAGE_KEYS, ROUTES } from '../constants';
+import { env } from '../config/env';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { ROUTES } from '../constants/routes';
 
 export const tokenStorage = {
-  getAccess: () =>
+  getAccess: (): string | null =>
     localStorage.getItem(STORAGE_KEYS.accessToken) ??
     sessionStorage.getItem(STORAGE_KEYS.accessToken),
 
-  getRefresh: () =>
+  getRefresh: (): string | null =>
     localStorage.getItem(STORAGE_KEYS.refreshToken) ??
     sessionStorage.getItem(STORAGE_KEYS.refreshToken),
 
-  setAccess: (token: string) => {
-    const useSession =
-      !localStorage.getItem(STORAGE_KEYS.refreshToken) &&
-      Boolean(sessionStorage.getItem(STORAGE_KEYS.refreshToken));
-    (useSession ? sessionStorage : localStorage).setItem(STORAGE_KEYS.accessToken, token);
+  setAccess: (token: string): void => {
+    localStorage.setItem(STORAGE_KEYS.accessToken, token);
   },
 
-  setTokens: (access: string, refresh: string, rememberMe = true) => {
-    localStorage.removeItem(STORAGE_KEYS.accessToken);
-    localStorage.removeItem(STORAGE_KEYS.refreshToken);
-    sessionStorage.removeItem(STORAGE_KEYS.accessToken);
-    sessionStorage.removeItem(STORAGE_KEYS.refreshToken);
-
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem(STORAGE_KEYS.accessToken, access);
-    storage.setItem(STORAGE_KEYS.refreshToken, refresh);
+  setTokens: (access: string, refresh: string): void => {
+    localStorage.setItem(STORAGE_KEYS.accessToken, access);
+    localStorage.setItem(STORAGE_KEYS.refreshToken, refresh);
   },
 
-  clear: () => {
+  clear: (): void => {
     localStorage.removeItem(STORAGE_KEYS.accessToken);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
     localStorage.removeItem(STORAGE_KEYS.apiUser);
@@ -54,9 +46,19 @@ let refreshPromise: Promise<string> | null = null;
 
 const refreshAccessToken = async (): Promise<string> => {
   const refresh = tokenStorage.getRefresh();
-  if (!refresh) throw new Error('No refresh token');
-  const { data } = await axios.post<{ access: string }>(`${env.apiUrl}/auth/refresh`, { refresh });
-  tokenStorage.setAccess(data.access);
+  if (!refresh) throw new Error('no refresh token');
+
+  // إضافة السلاش في نهاية /auth/refresh/ كما يتطلب الباك إند
+  const { data } = await axios.post<{ access: string; refresh?: string }>(
+    `${env.apiUrl}/auth/refresh/`,
+    { refresh }
+  );
+
+  if (data.refresh) {
+    tokenStorage.setTokens(data.access, data.refresh);
+  } else {
+    tokenStorage.setAccess(data.access);
+  }
   return data.access;
 };
 
@@ -66,7 +68,10 @@ api.interceptors.response.use(
     const original = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
-    const isAuthCall = original?.url?.includes('/auth/');
+    const isAuthCall =
+      original?.url?.includes('/auth/login') ||
+      original?.url?.includes('/auth/register') ||
+      original?.url?.includes('/auth/refresh');
 
     if (error.response?.status === 401 && original && !original._retry && !isAuthCall) {
       original._retry = true;
@@ -86,7 +91,6 @@ api.interceptors.response.use(
   }
 );
 
-/** يحوّل أي خطأ لرسالة عربية واضحة تتعرض للمستخدم */
 export const getErrorMessage = (error: unknown, fallback = 'حدث خطأ غير متوقع'): string => {
   if (axios.isAxiosError(error)) {
     if (!error.response) return 'تعذّر الاتصال بالسيرفر';

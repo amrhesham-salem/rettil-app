@@ -108,7 +108,7 @@ export const HistoryPage: React.FC = () => {
       <Navbar />
 
       <main
-        className="w-full flex-1 relative overflow-hidden flex flex-col items-center pt-8 pb-16 px-4 sm:px-8 bg-no-repeat bg-cover bg-center min-h-[calc(100vh-70px)]"
+        className="w-full flex-1 relative overflow-hidden flex flex-col items-center pt-12 pb-16 px-4 sm:px-8 bg-no-repeat bg-cover bg-center min-h-[calc(100vh-70px)]"
         style={{ backgroundImage: `url(${historyBg})` }}
       >
         <h1 className="relative z-10 text-[30px] md:text-[34px] font-bold text-white mb-8 text-center">

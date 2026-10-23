@@ -6,10 +6,10 @@
 @theme {
   --color-brand-dark: #0B3B24;
   --color-brand-primary: #135D38;
-  --color-brand-secondary: #8C6D3B;
+  --color-brand-secondary: #A68754;
   --color-brand-light: #FBF9F4;
   --color-border-default: #E5E0D8;
-    --color-brand-green: #286A4C;
+  --color-brand-green: #286A4C;
   --color-brand-sand: #DCCEBB;
   --color-brand-sand-light: #E5D9C6;
   --color-brand-cream: #FAF8F5;
@@ -37,6 +37,24 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
+}
+
+/* التدرج الذهبي المعتمد في فيجما لجميع الأزرار والعناصر الأساسية بدلاً من اللون البني السادة */
+.bg-brand-secondary {
+  background-image: linear-gradient(90deg, #8C6D3B 0%, #B89C6E 50%, #8C6D3B 100%) !important;
+  border: 1px solid rgba(226, 194, 133, 0.25);
+  transition: filter 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+button.bg-brand-secondary:hover,
+a.bg-brand-secondary:hover {
+  background-image: linear-gradient(90deg, #6C542D 0%, #B09874 50%, #6C542D 100%) !important;
+}
+
+button.bg-brand-secondary:active,
+a.bg-brand-secondary:active {
+  background-image: linear-gradient(90deg, #765E37 0%, #AE9772 50%, #765E37 100%) !important;
+  border-color: #C9B69A !important;
 }
 
 ::selection {

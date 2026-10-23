@@ -62,7 +62,7 @@ export const ChallengePage: React.FC = () => {
     <div className="min-h-screen bg-brand-light text-right font-sans" dir="rtl">
       <Navbar />
 
-      <main className="mx-auto flex max-w-4xl flex-col items-center px-4 sm:px-6 md:px-8 pb-20 pt-10 md:pt-14">
+      <main className="mx-auto flex max-w-4xl flex-col items-center px-4 sm:px-6 md:px-8 pt-12 pb-20">
         {/* ── Page heading ── */}
         <section className="mb-8 sm:mb-10 text-center">
           <h1 className="mb-2 text-2xl sm:text-[30px] md:text-[34px] font-bold leading-tight text-brand-dark">
